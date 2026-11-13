@@ -10,6 +10,8 @@ Other tools that should be made available are mcp servers. First off, "mcp-atlas
 
 Allow Jarvis to write in the [Windows: "C:\Users\jseguin\OneDrive - THALES SA\Documents\Jarvis Notes", Mac: "~/Documents/Jarvis_Notes"] directory. This will allow Jarvis to store knowledge as we discuss and merge that knowledge into the knowledge system. Make sure to add this directory to Jarvis' knowledge. This "Notes" directory, should come from .env, of course
   
+We will need to consider that, in Windows, directories can have spaces and may be parsed improperly without surrounding quotes. Same for mac/linux but less likely since those users tend to know not to use spaces
+
 # Personal Knowledge Paths
 Paths that Jarvis indexed as its knowledge should not be hardcoded. They should be defined in .env
 
