@@ -43,7 +43,8 @@
     "engine": "mlx-audio",
     "model_id": "mlx-community/csm-1b-8bit",
     "profile": "Jarvis",
-    "language": "en"
+    "language": "en",
+    "windows": {"engine": "omnivoice", "model_id": "k2-fsa/OmniVoice"}
   },
   "hearing": {
     "model": "small",

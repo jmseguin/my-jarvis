@@ -8,6 +8,7 @@
 """
 import json
 import re
+import sys
 import threading
 import time
 import urllib.error
@@ -775,7 +776,14 @@ def main():
     brains, boot = load_brains()
     _active_brain = boot
     brain = brains[boot]
-    voice_cfg = cfg.get("voice")
+    voice_cfg = dict(cfg.get("voice") or {})
+    # Per-OS engine: Apple Silicon uses mlx-audio, Windows/Linux cannot (no MLX).
+    # Keys under voice.windows / voice.mac / voice.linux override the shared ones.
+    os_key = {"win32": "windows", "darwin": "mac"}.get(sys.platform, "linux")
+    for k in ("windows", "mac", "linux"):
+        override = voice_cfg.pop(k, None)
+        if k == os_key and isinstance(override, dict):
+            voice_cfg.update(override)
     if voice_mod is not None and voice_cfg:
         try:
             VOICE = voice_mod.VoiceBay(voice_cfg, VOICE_CACHE)
