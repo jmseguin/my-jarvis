@@ -1,0 +1,30 @@
+Give it ears that run on this machine. No browser speech recognition anywhere in this project: it sends audio to a
+cloud.
+
+THE HEARING BAY: hear.py, using mlx_whisper on Apple Silicon and faster_whisper on Windows and Linux, soft-imported so
+Jarvis boots without it. Add "hearing": {"model": "large-v3-turbo","wake_model": "small"} to config.json and map those
+names to the right repo or size for whichever package is installed. Load both models ONCE at boot, keep them in memory,
+and warm each with one second of silence so the first real transcription is not a cold start. POST /hear takes a WAV
+body and returns {"text","seconds"}.
+
+THE MICROPHONE: in the viewer, capture with getUserMedia and encode 16 kHz mono 16-bit WAV in the browser, no ffmpeg.
+Measure loudness continuously. An utterance starts when loudness crosses a threshold and ends after SILENCE_MS of quiet, 
+a named constant at the top of the file, starting at 700. Ignore anything under 300 ms. Then apply the FINISH
+WINDOW: buffer the transcript and wait FINISH_MS (start at 900) for more speech before dispatching, because I pause in
+the middle of sentences. More speech appends and restarts the timer.
+
+THE WAKE WORD: a hands-free toggle. When it is on, every utterance goes to the SMALL model first. If the text starts
+with "Jarvis" (also "hey Jarvis"), strip it and send the rest to the LARGE model and on to /chat. If nothing follows
+the name, say "Yes, sir?" and treat the next utterance as the command. Anything without the name is discarded, never
+logged, never sent anywhere. A push-to-talk button bypasses the wake word and goes straight to the large model.
+
+INTERRUPTING: while Jarvis is speaking keep listening, but only for "stop" and "wait", which stop playback instantly.
+Raise the threshold while audio plays so his own voice through the speakers does not trigger it, and tell me plainly if
+my setup needs headphones.
+
+STATUS: a status line that shows listening, heard (with the text), thinking and speaking, so I always know which of us
+the machine thinks is talking. ?mute=1 tabs still hear, they just never speak.
+
+VERIFY: a test plan with what to say and what I should see, including one mid-sentence pause to prove the finish
+window, one sentence without the wake word that must be discarded, and the measured seconds from the end of my speech
+to the transcript on screen.

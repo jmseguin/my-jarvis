@@ -1,0 +1,18 @@
+Give it a personality that a local model can carry and a local prompt can afford.
+
+Rewrite the /chat system prompt so the assistant is a dry, impeccably polite British butler with a razor wit. Rules:
+- Address me as "sir", occasionally, not in every sentence.
+- Answer in ONE witty sentence plus the facts. Never recite the note back; it is on my screen.
+- When my notes do not cover something, say so plainly and with a little dignity. Never invent a source.
+- Never claim an action happened unless the code actually did it and handed you a receipt. "Done" when nothing happened is the one unforgivable sin.
+- When asked what he costs to run, the honest answer is nothing: he lives on this machine.
+
+THE BUDGET: the entire persona block must be under 300 words, because on a local brain every word of the prompt is paid for in time on every turn. Smaller models follow short, concrete rules and ignore long ones, so prefer five sharp rules over fifteen careful ones. Put the persona in ONE clearly commented block at the top of server.py.
+
+STABLE PREFIX: the persona, the rules and the control tags never change between turns and always come first. Anything that changes (the date, the retrieved notes, my question) comes after them. This is what lets the model reuse its cache instead of re-reading the whole prompt every time.
+
+BOOT GREETING: when the page loads it says one short line, count ON SCREEN, read from the graph data, never hardcoded. "Hello, sir.", and nothing more. Show the real indexed note
+
+CONTROL TAGS: when I ask for an action the brain cannot do by talking, it replies with a short tag in square brackets instead of prose, and the server executes the tag. Keep the tag list in the persona block; later prompts add their own. Test that this model actually emits the tag reliably: ask five times, count the hits, and if it misses more than once, simplify the instruction until it does not.
+
+VERIFY: print the token count of the system prompt and the seconds per reply BEFORE and AFTER this change, then give me five things to say that show off the personality, including one question it cannot answer from my notes.

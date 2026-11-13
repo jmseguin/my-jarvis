@@ -1,0 +1,15 @@
+Let me swap brains by voice, always see which one is live, and prove a conversation never leaves this machine.
+
+THE SHELF: config.json gets a "brains" block of named entries, each with base_url, model, api_key and optional
+extra_body. Ship it with "local" (the Ollama entry from Prompt 01), "big" (a second Ollama tag I will fill in, for the largest brain my memory allows) and "claude" ({"base_url": "https://api.anthropic.com","model":"claude-opus-5-5","api_key": "PUT-YOUR-KEY-HERE"}). The Anthropic entry uses the Messages API shape; keep the two request builders side by side in one small function. If the key is still the placeholder,
+"switch to Claude" answers in one dry line that the cloud brain has no key, and stays local. I will type the real key into the file myself; never ask me for it in chat.
+
+THE ROUTES: "switch to your local brain","switch to your big brain","switch to Claude","which brain are you on". Swaps are runtime only: every restart boots on the brain named in config.json "boot_brain", default "local". Confirm each swap in one short line, spoken by the NEW brain, and say which machine it lives on. When a request needs the cloud and the cloud is unplugged, Jarvis says so in one line instead of pretending; add that rule to the persona block. When I switch to a brain Ollama has not loaded yet, say "one moment, sir" while it loads.
+
+THE BADGE: a small line under the status that shows BRAIN and VOICE, for example BRAIN local qwen3.5:9b, VOICE local Jarvis. Hidden by default, visible for 5 seconds whenever either one actually changes, including when the voice falls back to the browser because the engine died.
+
+BRING THE LIBRARIES HOME: the viewer still loads its 3D libraries from a CDN. Download the exact pinned versions once into viewer/vendor/, rewrite the imports to those local files, remove every remaining reference to any CDN, and record the versions and source URLs in viewer/vendor/VERSIONS.txt. After this, the page must render with no network at all.
+
+THE DRILL, as drill.py: wrap the server's outbound HTTP so every connection it opens is logged with the host and the reason, and read the browser's resource timing entries after a turn. Then: send one real question through /chat, speak the answer through /tts, feed that WAV back through /hear, and PRINT every host that is not localhost or 127.0.0.1. The drill passes only when that list is empty. If "switch to Claude" is active with a real key, the drill must FAIL and name api.anthropic.com, which proves the watcher works. End by printing THE HONEST LIST: the features that still need the internet, read from the code, not from memory.
+
+VERIFY: in a ?mute=1 tab run every route and show the badge appear and disappear, prove a restart boots back to the configured brain, grep the viewer and the network log for the placeholder key, run the drill in local mode and paste the empty host list. Then give me a four-step script for the on-camera version: turn off Wi-Fi, reload the page, ask one question whose answer lives in one note, and what I should see and hear.

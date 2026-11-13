@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knowledge Galaxy</title>
+<style>
+  :root {
+    --panel: rgba(8, 10, 22, 0.78);
+    --edge: rgba(140, 170, 255, 0.18);
+    --text: #dfe6ff;
+    --muted: #8b93b8;
+    --accent: #7fb4ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; overflow: hidden; }
+  #galaxy { position: fixed; inset: 0; }
+
+  #title { position: fixed; top: 18px; left: 22px; pointer-events: none; letter-spacing: .28em;
+    text-transform: uppercase; font-size: 12px; color: var(--muted); }
+  #title b { color: var(--text); font-weight: 600; }
+  #legend { position: fixed; top: 46px; left: 22px; display: flex; flex-direction: column; gap: 4px;
+    font-size: 12px; color: var(--muted); max-height: 50vh; overflow: auto; }
+  #legend span { display: inline-flex; align-items: center; gap: 8px; }
+  #legend i { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 8px currentColor; background: currentColor; }
+
+  #panel { position: fixed; top: 0; right: 0; height: 100%; width: min(420px, 92vw); padding: 28px 26px 120px;
+    background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-left: 1px solid var(--edge); transform: translateX(105%); transition: transform .45s cubic-bezier(.2,.8,.2,1);
+    overflow-y: auto; z-index: 5; }
+  #panel.open { transform: none; }
+  #panel h2 { margin: 6px 0 2px; font-size: 22px; font-weight: 600; }
+  #panel .group { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+  #panel .path { color: var(--muted); font-size: 12px; margin-bottom: 18px; word-break: break-all; }
+  #panel .excerpt { white-space: pre-wrap; color: #c5cdef; font-size: 13.5px; border-top: 1px solid var(--edge); padding-top: 16px; }
+  #panel h3 { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin: 22px 0 8px; }
+  #panel .neigh { display: flex; flex-wrap: wrap; gap: 6px; }
+  #panel .neigh button { background: rgba(127,180,255,.08); color: var(--text); border: 1px solid var(--edge);
+    border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+  #panel .neigh button:hover { border-color: var(--accent); }
+  #close { position: absolute; top: 14px; right: 16px; background: none; border: 0; color: var(--muted);
+    font-size: 22px; cursor: pointer; line-height: 1; }
+  #close:hover { color: var(--text); }
+
+  #chat { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(720px, 92vw); z-index: 6; }
+  #answer { display: none; margin-bottom: 10px; padding: 14px 18px; background: var(--panel);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--edge);
+    border-radius: 14px; max-height: 34vh; overflow-y: auto; }
+  #answer.show { display: block; }
+  #answer .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  #answer .meta button { background: none; border: 0; color: var(--accent); cursor: pointer; font: inherit; padding: 0 4px; }
+  #ask { display: flex; gap: 8px; padding: 6px; background: var(--panel); border: 1px solid var(--edge);
+    border-radius: 999px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+  #ask input { flex: 1; background: transparent; border: 0; outline: none; color: var(--text); font: inherit;
+    font-size: 15px; padding: 10px 16px; }
+  #ask input::placeholder { color: var(--muted); }
+  #ask button { border: 0; border-radius: 999px; padding: 0 20px; font: inherit; font-weight: 600; cursor: pointer;
+    background: linear-gradient(135deg, #5b8cff, #a66bff); color: #fff; }
+  #ask button.mic { background: rgba(127, 180, 255, 0.12); color: var(--text); border: 1px solid var(--edge);
+    padding: 0 14px; font-weight: 500; font-size: 13px; white-space: nowrap; }
+  #ask button.mic.on { background: rgba(125, 255, 178, 0.18); border-color: #7dffb2; color: #7dffb2; }
+  #ask button.mic.rec { background: rgba(255, 106, 213, 0.22); border-color: #ff6ad5; color: #ffb3ea; }
+  #ask button:disabled { opacity: .5; cursor: progress; }
+  #hear-status { font-size: 12px; color: var(--muted); padding: 0 14px 6px; min-height: 20px;
+    display: flex; justify-content: space-between; gap: 12px; }
+  #hear-status .state { color: var(--accent); }
+  #hear-status .hint { color: #ffcf5c; }
+  #badge { font-size: 11px; letter-spacing: .06em; color: var(--muted); padding: 0 14px 4px;
+    opacity: 0; transition: opacity .35s; pointer-events: none; }
+  #badge.show { opacity: 1; }
+  .thinking { color: var(--muted); }
+  .thinking::after { content: "…"; animation: blink 1s steps(3) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  #status { position: fixed; bottom: 4px; right: 8px; font-size: 10px; color: #333; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+<!-- Local vendored libraries (see vendor/VERSIONS.txt). One shared three instance. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.js",
+    "three/webgpu": "./vendor/three-webgpu.js",
+    "three/addons/": "./vendor/three-jsm/",
+    "three/addons/postprocessing/UnrealBloomPass.js": "./vendor/UnrealBloomPass.js",
+    "three/examples/jsm/": "./vendor/three-jsm/",
+    "3d-force-graph": "./vendor/3d-force-graph.js"
+  }
+}
+</script>
+<script src="graph-data.js"></script>
+<script src="jarvis-voice.js"></script>
+<script src="jarvis-hear.js"></script>
+</head>
+<body>
+<div id="galaxy"></div>
+<div id="title"><b>Knowledge</b> Galaxy</div>
+<div id="legend"></div>
+
+<aside id="panel" aria-live="polite">
+  <button id="close" aria-label="Close panel">×</button>
+  <div class="group" id="p-group"></div>
+  <h2 id="p-label"></h2>
+  <div class="path" id="p-path"></div>
+  <div class="excerpt" id="p-excerpt"></div>
+  <h3>Connected</h3>
+  <div class="neigh" id="p-neigh"></div>
+</aside>
+
+<div id="chat">
+  <div id="answer"></div>
+  <div id="hear-status" aria-live="polite"><span class="state"></span><span class="hint"></span></div>
+  <div id="badge" aria-live="polite"></div>
+  <form id="ask" autocomplete="off">
+    <button id="hf-btn" class="mic" type="button" title="Toggle hands-free wake word ('Jarvis')">Hands-free</button>
+    <button id="ptt-btn" class="mic" type="button" title="Hold to talk (bypasses wake word)">Hold to talk</button>
+    <label class="sr" for="q">Ask your notes</label>
+    <input id="q" placeholder="Ask your notes anything…" maxlength="2000">
+    <button id="send" type="submit">Ask</button>
+  </form>
+</div>
+<div id="status" data-ready="0">loading</div>
+
+<script type="module">
+import * as THREE from "three";
+import ForceGraph3D from "3d-force-graph";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+
+const statusEl = document.getElementById("status");
+const data = { nodes: GRAPH.nodes.map(n => ({ ...n })), links: GRAPH.links.map(l => ({ ...l })) };
+
+// ---------- groups & colours
+const PALETTE = ["#5fb3ff", "#ff6ad5", "#7dffb2", "#ffcf5c", "#b18cff", "#ff7a59",
+                 "#4ff0ff", "#f5ff6b", "#ff9bd2", "#8affef", "#ffa64d", "#9db4ff"];
+const groups = [...new Set(data.nodes.map(n => n.group))].sort();
+const colorOf = g => PALETTE[groups.indexOf(g) % PALETTE.length];
+function renderLegend() {
+  document.getElementById("legend").innerHTML =
+    groups.map(g => `<span style="color:${colorOf(g)}"><i></i><em style="color:#8b93b8;font-style:normal">${esc(g)}</em></span>`).join("");
+}
+renderLegend();
+
+// ---------- adjacency
+const neighbours = new Map(data.nodes.map(n => [n.id, new Set()]));
+data.links.forEach(l => { neighbours.get(l.source).add(l.target); neighbours.get(l.target).add(l.source); });
+data.nodes.forEach(n => n.degree = neighbours.get(n.id).size);
+
+// ---------- glow sprite texture
+const glowTex = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d"), r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.2, "rgba(255,255,255,.55)");
+  r.addColorStop(0.5, "rgba(255,255,255,.12)"); r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+
+function makeNode(n) {
+  const color = new THREE.Color(colorOf(n.group));
+  const size = 3 + Math.sqrt(n.degree) * 1.6;
+  const group = new THREE.Group();
+  const core = new THREE.Mesh(new THREE.SphereGeometry(size, 24, 24),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 }));
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true,
+    opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+  glow.scale.set(size * 5.5, size * 5.5, 1);
+  group.add(glow, core);
+  n.__core = core; n.__glow = glow;
+  return group;
+}
+
+// ---------- highlight state
+let selected = null;
+const lit = new Set(), litLinks = new Set();
+function setHighlight(ids, focus = null) {
+  lit.clear(); litLinks.clear();
+  ids.forEach(id => lit.add(id));
+  if (focus !== null) { lit.add(focus); neighbours.get(focus).forEach(id => lit.add(id)); }
+  data.links.forEach(l => {
+    const s = l.source.id ?? l.source, t = l.target.id ?? l.target;
+    if (lit.has(s) && lit.has(t)) litLinks.add(l);
+  });
+  const any = lit.size > 0;
+  data.nodes.forEach(n => {
+    if (!n.__core) return;
+    const on = !any || lit.has(n.id);
+    n.__core.material.opacity = on ? 0.95 : 0.12;
+    n.__glow.material.opacity = on ? (n.id === focus ? 1 : 0.8) : 0.05;
+    const s = n.id === focus ? 1.5 : 1; n.__core.scale.setScalar(s);
+  });
+  Graph.linkColor(Graph.linkColor()).linkWidth(Graph.linkWidth())
+       .linkDirectionalParticles(Graph.linkDirectionalParticles());
+}
+
+// ---------- graph
+const el = document.getElementById("galaxy");
+const Graph = new ForceGraph3D(el, { controlType: "orbit" })
+  .backgroundColor("#000000")
+  .showNavInfo(false)
+  .graphData(data)
+  .nodeId("id")
+  .nodeLabel(n => `<div style="padding:4px 8px;background:rgba(0,0,0,.7);border-radius:6px">${esc(n.label)}<br><span style="color:#8b93b8;font-size:11px">${esc(n.group)}</span></div>`)
+  .nodeThreeObject(makeNode)
+  .linkColor(l => litLinks.has(l) ? "#cfe0ff" : (lit.size ? "rgba(120,140,200,0.06)" : "rgba(140,170,255,0.28)"))
+  .linkWidth(l => litLinks.has(l) ? 1.4 : 0.4)
+  .linkOpacity(0.6)
+  .linkDirectionalParticles(l => litLinks.has(l) ? 3 : 0)
+  .linkDirectionalParticleWidth(1.6)
+  .linkDirectionalParticleSpeed(0.006)
+  .onNodeClick(n => focusNode(n))
+  .onBackgroundClick(() => closePanel());
+
+Graph.d3Force("charge").strength(-140);
+Graph.cameraPosition({ x: 0, y: 40, z: Math.max(220, data.nodes.length * 6) });
+
+// cinematic bloom
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.85, 0.5, 0.1);
+Graph.postProcessingComposer().addPass(bloom);
+
+// starfield
+(() => {
+  const N = 6000, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const r = 1500 + Math.random() * 2500, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+    pos.set([r * Math.sin(ph) * Math.cos(th), r * Math.sin(ph) * Math.sin(th), r * Math.cos(ph)], i * 3);
+    const t = 0.55 + Math.random() * 0.45, tint = Math.random();
+    col.set([t * (tint > .8 ? 0.8 : 1), t * 0.9, t * (tint < .3 ? 0.8 : 1)], i * 3);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  const stars = new THREE.Points(geo, new THREE.PointsMaterial({ size: 2.2, vertexColors: true,
+    transparent: true, opacity: 0.85, sizeAttenuation: true, depthWrite: false }));
+  Graph.scene().add(stars);
+})();
+
+// ---------- slow idle rotation (pauses while you interact or read a note)
+let idleUntil = 0;
+const pauseIdle = (ms = 6000) => { idleUntil = performance.now() + ms; };
+["pointerdown", "wheel", "touchstart"].forEach(ev => el.addEventListener(ev, () => pauseIdle(), { passive: true }));
+(function spin() {
+  if (!selected && performance.now() > idleUntil) {
+    const cam = Graph.camera(), target = Graph.controls().target, a = 0.0009;
+    const dx = cam.position.x - target.x, dz = cam.position.z - target.z;
+    cam.position.x = target.x + dx * Math.cos(a) - dz * Math.sin(a);
+    cam.position.z = target.z + dx * Math.sin(a) + dz * Math.cos(a);
+    cam.lookAt(target);
+  }
+  requestAnimationFrame(spin);
+})();
+
+// ---------- focus & panel
+const panel = document.getElementById("panel");
+function focusNode(n) {
+  selected = n;
+  const d = 90, r = 1 + d / Math.hypot(n.x || 1, n.y || 1, n.z || 1);
+  Graph.cameraPosition({ x: n.x * r, y: n.y * r, z: n.z * r }, n, 1600);
+  setHighlight([], n.id);
+  document.getElementById("p-group").textContent = n.group;
+  document.getElementById("p-group").style.color = colorOf(n.group);
+  document.getElementById("p-label").textContent = n.label;
+  document.getElementById("p-path").textContent = n.path;
+  document.getElementById("p-excerpt").textContent = n.excerpt || "(empty note)";
+  const nb = [...neighbours.get(n.id)].map(id => data.nodes[id]);
+  document.getElementById("p-neigh").innerHTML = nb.length
+    ? nb.map(m => `<button data-id="${m.id}" style="border-color:${colorOf(m.group)}55">${esc(m.label)}</button>`).join("")
+    : '<span style="color:#8b93b8">No links yet</span>';
+  panel.classList.add("open");
+}
+function closePanel() {
+  selected = null; panel.classList.remove("open"); setHighlight([]); pauseIdle(1500);
+}
+document.getElementById("close").onclick = closePanel;
+document.getElementById("p-neigh").onclick = e => {
+  const id = e.target.dataset?.id; if (id !== undefined) focusNode(data.nodes[+id]);
+};
+addEventListener("keydown", e => { if (e.key === "Escape") closePanel(); });
+
+// ---------- ONE DOOR FOR NEW NOTES (viewer side): birth, link, pulse, fly
+function addNote(payload) {
+  const n = { ...payload.node };
+  if (!groups.includes(n.group)) {
+    groups.push(n.group);
+    groups.sort();
+    renderLegend();
+  }
+  const anchor = payload.anchor != null ? data.nodes[payload.anchor] : null;
+  n.x = (anchor?.x || 0) + (Math.random() - 0.5) * 18;
+  n.y = (anchor?.y || 0) + (Math.random() - 0.5) * 18;
+  n.z = (anchor?.z || 0) + (Math.random() - 0.5) * 18;
+  neighbours.set(n.id, new Set());
+  data.nodes.push(n);
+
+  for (const l of payload.links || []) {
+    const s = l.source.id ?? l.source, t = l.target.id ?? l.target;
+    neighbours.get(s)?.add(t);
+    neighbours.get(t)?.add(s);
+    data.links.push({ ...l });
+  }
+  data.nodes.forEach(node => { node.degree = neighbours.get(node.id).size; });
+  Graph.graphData(data);
+
+  // Brief glow pulse on birth, then fly camera to it
+  const tStart = performance.now();
+  (function pulse() {
+    const p = Math.min(1, (performance.now() - tStart) / 1300);
+    if (n.__core && n.__glow) {
+      const k = 1 + Math.sin(p * Math.PI) * 2.2;
+      n.__core.scale.setScalar(k);
+      const base = (3 + Math.sqrt(n.degree) * 1.6) * 5.5;
+      n.__glow.scale.set(base * k, base * k, 1);
+      n.__glow.material.opacity = 1;
+    }
+    if (p < 1) requestAnimationFrame(pulse);
+  })();
+  setTimeout(() => focusNode(n), 250);
+  return n;
+}
+window.addNote = addNote;
+
+// ---------- chat & ears
+const form = document.getElementById("ask"), input = document.getElementById("q"),
+      send = document.getElementById("send"), answer = document.getElementById("answer"),
+      hfBtn = document.getElementById("hf-btn"), pttBtn = document.getElementById("ptt-btn"),
+      hearStateEl = document.querySelector("#hear-status .state"),
+      hearHintEl = document.querySelector("#hear-status .hint");
+
+function setTurnStatus(kind, detail = "") {
+  if (kind === "idle") { hearStateEl.textContent = ""; return; }
+  if (kind === "listening") { hearStateEl.textContent = detail ? `Listening (${detail})…` : "Listening…"; return; }
+  if (kind === "heard") { hearStateEl.textContent = `Heard: "${detail}"`; return; }
+  if (kind === "thinking") { hearStateEl.textContent = "Thinking…"; return; }
+  if (kind === "speaking") { hearStateEl.textContent = "Speaking…"; return; }
+  if (kind === "error") { hearStateEl.textContent = `Mic/Hear error: ${detail}`; }
+}
+
+async function submitQuestion(question) {
+  if (!question) return;
+  send.disabled = true; answer.classList.add("show");
+  const routed = await window.JarvisVoice?.routeVoice(question);
+  if (routed) {
+    answer.innerHTML = `<div>${esc(routed.reply)}</div><div class="meta">voice route · ${esc(routed.route)}</div>`;
+    input.value = "";
+    send.disabled = false; input.focus();
+    await window.JarvisVoice?.speak(routed.reply);
+    if (window.JarvisHear?.state.handsFree) setTurnStatus("listening");
+    else setTurnStatus("idle");
+    return;
+  }
+  setTurnStatus("thinking");
+  answer.innerHTML = `<div class="thinking">Thinking</div>`;
+  const t0 = performance.now();
+  try {
+    const res = await fetch("/chat", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }) });
+    updateBadge(res.headers.get("X-Jarvis-Brain"), res.headers.get("X-Jarvis-Voice"));
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || res.statusText);
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    const chips = out.nodes.map(id => `<button data-id="${id}">${esc(data.nodes[id].label)}</button>`).join("·");
+    const tagInfo = out.tag ? ` · action ${esc(out.tag)} ${out.ok ? "✓" : "✗"}` : "";
+    answer.innerHTML = `<div>${esc(out.answer)}</div><div class="meta">${secs}s${tagInfo} · ${chips || (out.tag ? "" : "no matching notes")}</div>`;
+    if (out.focus !== undefined && data.nodes[out.focus]) focusNode(data.nodes[out.focus]);
+    else if (out.nodes.length >= 4) setHighlight(out.nodes);
+    else if (out.nodes.length >= 1 && data.nodes[out.nodes[0]]) focusNode(data.nodes[out.nodes[0]]);
+    else setHighlight([]);
+    input.value = "";
+    await window.JarvisVoice?.speak(out.answer);
+  } catch (err) {
+    answer.innerHTML = `<div style="color:#ff8a8a">Brain error: ${esc(err.message)}</div>`;
+  } finally {
+    send.disabled = false; input.focus();
+    if (window.JarvisHear?.state.handsFree) setTurnStatus("listening");
+    else setTurnStatus("idle");
+  }
+}
+
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  submitQuestion(input.value.trim());
+});
+
+window.addEventListener("jarvis:speaking", e => {
+  if (e.detail.speaking) setTurnStatus("speaking");
+  else if (window.JarvisHear?.state.handsFree) setTurnStatus("listening");
+  else if (hearStateEl.textContent === "Speaking…") setTurnStatus("idle");
+});
+
+const badgeEl = document.getElementById("badge");
+let badgeBrain = "", badgeVoice = "", badgeTimer = null;
+function updateBadge(brainStr, voiceStr) {
+  let changed = false;
+  if (brainStr && brainStr !== badgeBrain) { if (badgeBrain) changed = true; badgeBrain = brainStr; }
+  if (voiceStr && voiceStr !== badgeVoice) { if (badgeVoice) changed = true; badgeVoice = voiceStr; }
+  badgeEl.textContent = `BRAIN ${badgeBrain || "—"}, VOICE ${(badgeVoice || "—").replace(":", " ")}`;
+  if (changed) {
+    badgeEl.classList.add("show");
+    clearTimeout(badgeTimer);
+    badgeTimer = setTimeout(() => badgeEl.classList.remove("show"), 5000);
+  }
+}
+window.addEventListener("jarvis:voice-header", e => updateBadge(null, e.detail.voice));
+Promise.all([
+  fetch("/brain").then(r => r.json()).catch(() => null),
+  fetch("/voice").then(r => r.json()).catch(() => null),
+]).then(([b, v]) => {
+  if (b?.name) badgeBrain = `${b.name} ${b.model}`;
+  if (v?.mode) badgeVoice = v.mode;
+  badgeEl.textContent = `BRAIN ${badgeBrain || "—"}, VOICE ${(badgeVoice || "—").replace(":", " ")}`;
+});
+
+async function switchBrain(name) {
+  try {
+    const chk = await fetch(`/brain?check=${encodeURIComponent(name)}`).then(r => r.json()).catch(() => ({ loaded: true }));
+    if (chk && chk.loaded === false) window.JarvisVoice?.speak("One moment, sir.");
+    const res = await fetch("/brain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || res.statusText);
+    if (out.name) updateBadge(`${out.name} ${out.model}`, null);
+    return out.answer;
+  } catch (err) {
+    return `I could not switch brains, sir: ${err.message}`;
+  }
+}
+
+window.JarvisVoice?.addRoute("brain-local", /\bswitch\s+to\s+(?:your\s+)?local\s+brain\b/i, () => switchBrain("local"));
+window.JarvisVoice?.addRoute("brain-big", /\bswitch\s+to\s+(?:your\s+)?big\s+brain\b/i, () => switchBrain("big"));
+window.JarvisVoice?.addRoute("brain-claude", /\bswitch\s+to\s+claude\b/i, () => switchBrain("claude"));
+window.JarvisVoice?.addRoute("brain-which", /\bwhich\s+brain\s+are\s+you\s+on\b/i, async () => {
+  const b = await fetch("/brain").then(r => r.json());
+  updateBadge(`${b.name} ${b.model}`, null);
+  return `I am on the ${b.name} brain, ${b.model}, living on ${b.machine}, sir.`;
+});
+
+window.JarvisVoice?.addRoute(
+  "remember",
+  /^(?:(?:hey[\s,]+)?jarvis[\s,]+)?remember\s+that\s+(.+)/i,
+  async m => {
+    try {
+      const res = await fetch("/remember", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: m[1].trim() }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || res.statusText);
+      addNote(out);
+      return out.answer;
+    } catch (err) {
+      return `I'm afraid I could not save that note, sir: ${err.message}`;
+    }
+  }
+);
+
+window.JarvisHear?.configure({
+  onStatus: (kind, detail) => setTurnStatus(kind, detail),
+  onHeadphoneHint: msg => { hearHintEl.textContent = msg; },
+  onDispatch: (text, meta) => {
+    input.value = text;
+    if (meta?.secondsToTranscript != null) hearHintEl.textContent = `transcript ${meta.secondsToTranscript}s`;
+    submitQuestion(text);
+  },
+});
+
+hfBtn.onclick = async () => {
+  try {
+    const next = !window.JarvisHear.state.handsFree;
+    await window.JarvisHear.setHandsFree(next);
+    hfBtn.classList.toggle("on", next);
+    hfBtn.textContent = next ? "Hands-free: ON" : "Hands-free";
+    if (next && !hearHintEl.textContent) hearHintEl.textContent = "Headphones recommended if interrupting on speakers.";
+  } catch (err) {
+    setTurnStatus("error", err.message);
+  }
+};
+
+pttBtn.addEventListener("pointerdown", async e => {
+  e.preventDefault();
+  try { pttBtn.classList.add("rec"); await window.JarvisHear.startPTT(); }
+  catch (err) { pttBtn.classList.remove("rec"); setTurnStatus("error", err.message); }
+});
+["pointerup", "pointercancel", "pointerleave"].forEach(ev =>
+  pttBtn.addEventListener(ev, () => {
+    if (window.JarvisHear?.state.pttActive) { pttBtn.classList.remove("rec"); window.JarvisHear.stopPTT(); }
+  })
+);
+answer.addEventListener("click", e => {
+  const id = e.target.dataset?.id; if (id !== undefined) focusNode(data.nodes[+id]);
+});
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]); }
+
+// ---------- boot greeting: count read from the graph data, never hardcoded
+(() => {
+  const n = GRAPH.nodes.length, l = GRAPH.links.length;
+  answer.classList.add("show");
+  answer.innerHTML = `<div>Hello, sir.</div><div class="meta">${n} notes indexed · ${l} links</div>`;
+  // Browsers block audio before the first gesture: try now, and if nothing
+  // actually played, greet once on the first click or key press instead.
+  let greeted = false;
+  const greet = async () => {
+    if (greeted) return;
+    const run = await window.JarvisVoice?.speak("Hello, sir.");
+    if (run?.summary && (run.summary.firstAudioSeconds !== null || run.summary.muted)) greeted = true;
+  };
+  const once = () => { removeEventListener("pointerdown", once); removeEventListener("keydown", once); greet(); };
+  addEventListener("pointerdown", once); addEventListener("keydown", once);
+  greet();
+})();
+
+// readiness marker (used by verification)
+setTimeout(() => {
+  const ok = Graph.scene().children.length > 0 && data.nodes.every(n => n.__core);
+  statusEl.dataset.ready = ok ? "1" : "0";
+  statusEl.dataset.nodes = data.nodes.length;
+  statusEl.dataset.links = data.links.length;
+  statusEl.dataset.rendered = data.nodes.filter(n => n.__core).length;
+  statusEl.textContent = ok ? `${data.nodes.length} notes` : "render failed";
+}, 2500);
+</script>
+</body>
+</html>

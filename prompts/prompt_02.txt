@@ -1,0 +1,31 @@
+Give it the cloned voice from VoiceStudio, which is open on this machine and answers on http://127.0.0.1:3900.
+MY ENGINE: [Mac: "engine": "mlx-audio","model_id": "mlx-community/csm-1b-8bit".    Windows: "engine": "voxcpm2"
+,"model_id": "voxcpm2"]
+THE VOICE BAY: voice.py, standard library only, soft-imported by server.py so Jarvis boots fine without it. Add
+"voice": {"url": "http://127.0.0.1:3900", MY ENGINE,"profile": "Jarvis","language": "en"} to config.json. At boot,
+and once per engine run, POST /engines/select with {"family": "tts","backend_id": ENGINE,"model_id": MODELID} so the 
+engine is pinned and never silently swapped for the app's default. Find the profile id by name from GET /profiles.
+
+THE ENDPOINT: POST /tts with {"text"} returns audio/wav from POST /v1/audio/speech with {"model": MODEL_ID,"input":text,"voice": PROFILE_ID,"response_format": "wav","language": LANG}. 
+Cap one request at 600 characters. Cache every WAV on disk by a hash of text plus profile, so repeated lines like the greeting are instant. Add the header X-Jarvis-
+Voice: local:PROFILE_NAME to every reply.
+
+KEEP IT WARM: every 10 idle minutes, render "Standing by." to the engine and throw the audio away, so the model stays
+loaded and the first real line of the day is not a cold start.
+
+THE PLAYER, and the law: split each answer into sentence-packed chunks of about 170 characters, never breaking inside a
+sentence. Request the first chunk, play it, and fetch the next chunk while the first one plays, so playback never gaps.
+Do NOT cut the first chunk shorter to start faster: a voice that pauses in the middle of a sentence sounds broken, and
+I will take a beat of extra wait over that every time.
+
+FALLBACK: if GET /health does not answer within one second, speak with the browser's Web Speech API instead and mark
+the reply X-Jarvis-Voice: browser. Never fail silently; never crash.
+
+THE MUTE FLAG: if the page URL contains ?mute=1 nothing in that tab ever speaks. Put the check inside the ONE function
+that plays audio, so nothing can route around it.
+
+VOICE ROUTES: keep a list of voice routes, each a pattern and a handler, checked BEFORE a sentence goes to the brain.
+Add "use your local voice" and "use the browser voice". Later prompts add their own routes to this list.
+
+VERIFY: play a 10-word line and an 80-word answer, print the seconds to first audio for each, confirm the second chunk
+was already fetched when the first finished, and confirm a ?mute=1 tab stays silent.

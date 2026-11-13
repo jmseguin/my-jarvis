@@ -1,0 +1,16 @@
+Build me a 3D knowledge galaxy from my markdown notes, with a LOCAL brain I can talk to through Ollama. Do the whole thing in one pass, then start it and verify it before you tell me it's done.
+
+MY NOTES: "~/Documents/Obsidian Vault", "~/Documents/Notes"
+MY BRAIN: lfm3:latest
+
+THE INDEXER: build.py, Python 3, standard library only. Scan every .md file and write viewer/graph-data.js containing const GRAPH = {nodes: [...], links: [...]}. Each node: a label from the filename, its parent folder as a group, roughly a 700-character excerpt. Link two notes when one mentions the other's title or they share [[wikilinks]]. CRITICAL: every node gets a numeric id equal to its index in the nodes array.
+
+THE VIEWER: viewer/index.html, single page, 3d-force-graph from a CDN pinned to an exact version (Prompt 06 brings it local). No npm, no build step. Cinematic: black space, a starfield, nodes glowing by group, slow idle rotation. Clicking a node flies the camera to it, lights its neighbours, and opens a side panel with the excerpt.
+
+THE SERVER: server.py, port 4700, bound to 127.0.0.1, serving ONLY the viewer/ folder. Create config.json in the PROJECT ROOT, never inside viewer/: {"brain": {"base_url": "http://localhost:11434/v1","model": "MY BRAIN","api_key":"ollama","extra_body": {"reasoning_effort": "none"}}}. Talk to it with the OpenAI-style chat completions request using urllib from the standard library, no SDK, merging extra_body into every request body. The same code must work unchanged against any cloud brain later, by changing only base_url, model and api_key.
+
+THE BRAIN: add POST /chat. Score every note against my question by keyword overlap, weighting title matches higher, take the top 6, and ask the model. System prompt: answer ONLY from these notes, in two or three sentences, and say so plainly when the notes do not cover it. Return {"answer": "...","nodes": [indexes used]}. Keep a short server-side history so follow-ups work. A clean input bar at the bottom of the viewer shows the answer.
+
+LOCAL BRAIN RULES, because every token costs time here, not cents: the system prompt must be identical on every turn and come FIRST, with the retrieved notes and my question LAST, so the model's cache skips re-reading it. Keep the system prompt under 400 words. Never send a thinking-disabled flag; the extra_body switch is what stops silent thinking. Give the reply at least 600 max tokens and retry once with a bigger budget if the text comes back empty.
+
+FINISH PROPERLY: start the server, confirm the page loads and the graph renders, ask /chat a real question and print the answer AND the seconds it took. Then give me three example questions based on my actual note titles.

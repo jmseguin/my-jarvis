@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Runtime caches, test audio, and generated personal note index
+voice_cache/
+viewer/graph-data.js
+*.wav
+*.tmp
+
+# OS / editor
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+.vscode/
+.idea/

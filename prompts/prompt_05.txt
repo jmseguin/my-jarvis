@@ -1,0 +1,16 @@
+Let me grow the brain by voice.
+
+- When I say or type anything starting with "remember that", POST it to a new /remember endpoint that writes a real markdown file into a captures/ folder inside my notes directory, with a sensible title from the first few words and today's date inside the file.
+- Add the new node to the running galaxy LIVE, without a page reload: born at the position of its most related existing node, a brief glow pulse, then fly the camera to it.
+- Link it into the graph the same way build.py would, so it is a real citizen of the galaxy and can be a source in the very next answer.
+- Confirm out loud in one line, in character, in the cloned voice.
+
+ONE DOOR FOR NEW NOTES: put the server side in ONE function (write the file, append the node to graph-data.js, add it to the live search index, return its index) and the viewer side in ONE function (addNote: birth, link, pulse, fly). Every future feature that creates a note goes through exactly these two.
+
+MAKE THE ANSWER PROVE ITSELF: /chat already returns the indexes it used. Fly the camera to the top source node and open its panel while the answer is spoken, so I can see which note it came from. If the answer drew on four or more notes, light the whole cluster instead of flying to one. Small talk never moves the camera: decide whether the question was about my notes BEFORE you decide whether to move anything.
+
+Two things to get right, because they bite later:
+1. Writing a file is not the same as indexing it. The new note must be searchable by /chat in the next question without re-running build.py.
+2. Never let a capture silently fail. If the write fails for any reason, say so out loud. A second brain that quietly forgets is worse than no second brain.
+
+Then have me test it: I will say "Jarvis, remember that the finish window should be 900 milliseconds" new star being born, and I will immediately ask a question that should retrieve it.
