@@ -1,6 +1,6 @@
 Build me a 3D knowledge galaxy from my markdown notes, with a LOCAL brain I can talk to through Ollama. Do the whole thing in one pass, then start it and verify it before you tell me it's done.
 
-MY NOTES: "~/Documents/Obsidian Vault", "~/Documents/Notes"
+MY NOTES: "C:\GitHub\ObsidianVault", "C:\Users\jseguin\OneDrive - THALES SA\Documents"
 MY BRAIN: lfm3:latest
 
 THE INDEXER: build.py, Python 3, standard library only. Scan every .md file and write viewer/graph-data.js containing const GRAPH = {nodes: [...], links: [...]}. Each node: a label from the filename, its parent folder as a group, roughly a 700-character excerpt. Link two notes when one mentions the other's title or they share [[wikilinks]]. CRITICAL: every node gets a numeric id equal to its index in the nodes array.
