@@ -4,11 +4,14 @@ Every tool lives in `tools/`, one module each, and is registered in `tools/__ini
 
 | Tool | Tag | Module | Needs |
 |---|---|---|---|
+| Date and time (system clock, no network) | `[TIME: question]` | `tools/clock.py` | nothing |
 | Web search (headless Chrome, Brave Search) | `[SEARCH: query]` | `tools/web_search.py` | Chrome; optional `CHROME_PATH` |
 | Jira | `[JIRA: key or words]` | `tools/atlassian.py` | `uvx`, `JIRA_URL`, `JIRA_PERSONAL_TOKEN` (or Cloud: `JIRA_USERNAME` + `JIRA_API_TOKEN`) |
 | Confluence | `[CONFLUENCE: words or page id]` | `tools/atlassian.py` | `CONFLUENCE_URL`, `CONFLUENCE_PERSONAL_TOKEN` (or Cloud pair) |
 
 Credentials go in `.env` (see `.env.example`), never in code or `config.json`.
+
+Date and time is answered straight from the clock, instantly and without the model, so it cannot be hallucinated. It handles "what time is it", "what is the date", "what day is it", "time in Tokyo / London / ...", and "how many days until / since Christmas, 2026-12-25, March 3". Every model prompt also carries the current date, time and time zone.
 
 ## Rules every tool follows
 - Runs only when the user explicitly asks (each tool's `intent` regex) and the query reuses words from the question, so the model cannot send notes content out.

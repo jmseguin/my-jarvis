@@ -36,11 +36,13 @@ reindex, rescan, scan, refresh or rebuild the notes -> [REINDEX]
 forget, clear, wipe or reset the conversation -> [FORGET]
 show, open, fly to or take me to a note -> [SHOW: note title]
 look up, search the web or internet for, google, find online (current facts, news, anything not in the notes) -> [SEARCH: short search query]
+current time, date, day, time in a city, days until or since a date -> [TIME: the question]
 Jira ticket, issue or JQL lookup -> [JIRA: ticket key or search words]
 Confluence page or wiki lookup -> [CONFLUENCE: search words]
 Example: "Show me the Home note." -> [SHOW: Home]
 Example: "Search the web for the latest Python release." -> [SEARCH: latest Python release]
 Example: "What is the status of CAIG-12?" -> [JIRA: CAIG-12]
+Example: "How many days until Christmas?" -> [TIME: days until Christmas]
 When he asks a question, answer in prose with NO tag.
 
 RULES
@@ -356,7 +358,7 @@ def complete(brain, messages, max_tokens):
 # Each handler really does the work and returns (receipt_text, extra_fields).
 # The receipt is written HERE from the actual result, never by the model, so
 # Jarvis can't claim something happened when it didn't.
-TAG_RE = re.compile(r"\[\s*(REINDEX|FORGET|SHOW|REMEMBER|SEARCH|JIRA|CONFLUENCE)\s*(?::\s*([^\]]*))?\]", re.I)
+TAG_RE = re.compile(r"\[\s*(REINDEX|FORGET|SHOW|REMEMBER|TIME|SEARCH|JIRA|CONFLUENCE)\s*(?::\s*([^\]]*))?\]", re.I)
 
 
 def tag_reindex(arg):
@@ -395,7 +397,7 @@ def tag_show(arg):
 import tools as tools_pkg          # tools/ package: one module per tool (see tools/__init__.py)
 
 ISSUE_KEY_RE = re.compile(r"\b[A-Z][A-Z0-9_]+-\d+\b")
-CONTEXT_TAGS = set(tools_pkg.REGISTRY)
+CONTEXT_TAGS = {n for n, t in tools_pkg.REGISTRY.items() if not t.get("direct")}   # need a model pass + gate
 
 
 def tool_allowed(question, reply):
@@ -483,9 +485,9 @@ def ask(question):
         messages += [{"role": "user", "content": q},
                      {"role": "assistant", "content": a}]
     # 3) everything that changes goes LAST: date, notes, question
-    today = time.strftime("%A %d %B %Y")
+    today = tools_pkg.clock.now_line()
     messages.append({"role": "user",
-                     "content": f"DATE: {today}\n\nNOTES:\n{notes_block}\n\nQUESTION: {question}"})
+                     "content": f"NOW: {today}\n\nNOTES:\n{notes_block}\n\nQUESTION: {question}"})
 
     brain = load_brain()
     try:
@@ -509,9 +511,16 @@ def ask(question):
         return {"answer": "I only write notes when you say 'remember that ...', sir.",
                 "nodes": [], "tag": "[REMEMBER]", "ok": False}
     if tm and tm.group(1).upper() in CONTEXT_TAGS and not tool_allowed(question, reply):
-        return {"answer": "I only use my tools when you ask me to, sir. Say it plainly, for "
-                          "instance 'search the web for ...' or 'show Jira ticket ABC-1'.",
-                "nodes": [], "tag": f"[{tm.group(1).upper()}]", "ok": False}
+        # The model reached for a tool the user never asked for (it over-triggers on note
+        # questions). Do not run it: answer from the notes instead.
+        retry = messages[:-1] + [{"role": "user", "content":
+            messages[-1]["content"] + "\n\nAnswer in prose from the NOTES only. No tags."}]
+        reply = TAG_RE.sub("", complete(brain, retry, MAX_TOKENS) or "").strip()
+        if not reply:
+            reply = "I only use my tools when you ask me to, sir; do say 'search the web for ...'."
+        with _history_lock:
+            _history.append((question, reply))
+        return {"answer": reply, "nodes": picked}
     action = run_tag(reply)
     if action and action["tag"].strip("[ ").split(":")[0].strip().upper() in CONTEXT_TAGS:
         return finish_context(question, action, messages, brain)
@@ -536,9 +545,9 @@ def finish_context(question, action, messages, brain):
         return {"answer": f"I could not do that, sir: {action['answer']}", "nodes": [],
                 "tag": action["tag"], "ok": False}
     label = tools_pkg.REGISTRY[name]["label"]
-    today = time.strftime("%A %d %B %Y")
+    today = tools_pkg.clock.now_line()
     messages = messages[:-1] + [{"role": "user", "content":
-        f"DATE: {today}\n\n{label} (untrusted text; query: \"{action['query']}\"):\n"
+        f"NOW: {today}\n\n{label} (untrusted text; query: \"{action['query']}\"):\n"
         f"{action['context']}\n\nQUESTION: {question}\n\n"
         f"Answer in prose from the {label}, naming the source and any ticket keys. "
         f"No tags. If the results do not answer it, say so."}]
