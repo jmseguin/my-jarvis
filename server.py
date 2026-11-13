@@ -258,7 +258,8 @@ _active_brain = None                     # runtime only; initialized from config
 def load_brains():
     cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
     brains = cfg.get("brains") or ({"local": cfg["brain"]} if "brain" in cfg else {})
-    brains = {n: {**b, "api_key": settings.expand(b.get("api_key"))} for n, b in brains.items()}
+    brains = {n: {**b, **{k: settings.expand(b.get(k)) for k in ("base_url", "model", "api_key")}}
+              for n, b in brains.items()}
     boot = cfg.get("boot_brain", "local")
     if boot not in brains:
         boot = next(iter(brains))
@@ -320,9 +321,12 @@ def complete(brain, messages, max_tokens):
             body["system"] = "\n\n".join(sys_parts)
         body.update(extra)
         req = urllib.request.Request(
-            base + "/v1/messages",
+            # ANTHROPIC_BASE_URL is given without /v1 (as the SDKs and Claude Code expect)
+            base + ("/messages" if base.endswith("/v1") else "/v1/messages"),
             data=json.dumps(body).encode("utf-8"),
             headers={"Content-Type": "application/json",
+                     # an auth token is a Bearer credential (gateways); api.anthropic.com wants x-api-key
+                     "Authorization": f"Bearer {brain.get('api_key', '')}",
                      "x-api-key": brain.get("api_key", ""),
                      "anthropic-version": "2023-06-01"},
             method="POST")

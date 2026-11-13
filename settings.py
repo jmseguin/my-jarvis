@@ -98,9 +98,13 @@ def get(name, default=""):
 
 
 def expand(value):
-    """Replace ${NAME} in a config.json string with its .env value ('' if unset)."""
+    """Replace ${NAME} or ${NAME:-default} in a config.json string with its .env value
+    (the default when unset or empty, else '')."""
     import re
-    return re.sub(r"\$\{(\w+)\}", lambda m: get(m.group(1)), value) if isinstance(value, str) else value
+
+    def sub(m):
+        return get(m.group(1)) or m.group(2) or ""
+    return re.sub(r"\$\{(\w+)(?::-([^}]*))?\}", sub, value) if isinstance(value, str) else value
 
 
 def config():
