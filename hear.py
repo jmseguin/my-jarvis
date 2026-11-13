@@ -17,6 +17,32 @@ import numpy as np
 
 SAMPLE_RATE = 16000
 
+
+def trust_corporate_certs():
+    """Make model downloads work behind a TLS-inspecting proxy.
+
+    Python's HTTPS stack ships its own CA list, which lacks the company's inspection
+    CA, hence "CERTIFICATE_VERIFY_FAILED ... unable to get local issuer certificate".
+    1. CA_BUNDLE in .env (a PEM file) is used for everything that honours SSL_CERT_FILE.
+    2. Otherwise the operating system's trust store is used (pip install truststore).
+    """
+    import os
+    import settings
+    if settings.get("HF_TOKEN"):                      # optional: faster, rate-limit-free downloads
+        os.environ["HF_TOKEN"] = settings.get("HF_TOKEN")
+    bundle = settings.get("CA_BUNDLE")
+    if bundle:
+        path = str(settings.as_path(bundle))
+        for var in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE"):
+            os.environ[var] = path
+        return f"CA_BUNDLE {path}"
+    try:
+        import truststore
+        truststore.inject_into_ssl()
+        return "operating-system certificate store"
+    except ImportError:
+        return "none (pip install truststore, or set CA_BUNDLE in .env)"
+
 MLX_REPOS = {
     "tiny": "mlx-community/whisper-tiny-mlx",
     "base": "mlx-community/whisper-base-mlx",
@@ -70,6 +96,7 @@ class HearingBay:
 
     def load_and_warm(self):
         t0 = time.time()
+        print(f"  hearing: trusting {trust_corporate_certs()}")
         silence = np.zeros(SAMPLE_RATE, dtype=np.float32)   # 1 second of silence
         if self.backend == "mlx_whisper":
             import mlx.core as mx
@@ -95,7 +122,15 @@ class HearingBay:
             for key, name in (("small", self.wake_name), ("large", self.large_name)):
                 repo = self._resolve(name)
                 self._repos[key] = repo
-                m = WhisperModel(repo, device=device, compute_type=compute)
+                if repo in self._repos.values() and any(
+                        self._repos.get(k) == repo and k in self._models for k in self._models):
+                    self._models[key] = next(self._models[k] for k in self._models if self._repos.get(k) == repo)
+                    continue    # same model for both slots: load it once
+                try:    # already downloaded? then never touch the network
+                    m = WhisperModel(repo, device=device, compute_type=compute, local_files_only=True)
+                except Exception:  # noqa: BLE001 - not cached yet: download once
+                    print(f"  hearing: downloading {repo} (first run only)")
+                    m = WhisperModel(repo, device=device, compute_type=compute)
                 self._models[key] = m
                 list(m.transcribe(silence, language="en", vad_filter=False)[0])
 

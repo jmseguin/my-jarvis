@@ -46,7 +46,7 @@
     "language": "en"
   },
   "hearing": {
-    "model": "large-v3-turbo",
+    "model": "small",
     "wake_model": "small"
   }
 }
