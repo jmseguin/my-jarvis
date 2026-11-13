@@ -21,8 +21,16 @@ ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "viewer" / "graph-data.js"
 
 def load_roots():
-    """Note folders Jarvis indexes: NOTES_PATHS in .env, separated by ';'. Never hardcoded."""
+    """Folders Jarvis indexes: JARVIS_NOTES_DIR (his own writable notes, first so its
+    files keep their own path prefix) plus NOTES_PATHS from .env, separated by ';'."""
     roots = [r.strip() for r in settings.get("NOTES_PATHS").split(";") if r.strip()]
+    own = settings.get("JARVIS_NOTES_DIR")
+    if own:
+        try:
+            settings.notes_dir()                      # create it so the first scan finds it
+        except OSError as e:
+            print(f"  ! cannot create JARVIS_NOTES_DIR: {e}")
+        roots.insert(0, own)
     if not roots:
         sys.exit("No note folders configured. Copy .env.example to .env and set NOTES_PATHS.")
     return roots

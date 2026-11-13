@@ -356,7 +356,8 @@ async function submitQuestion(question) {
     updateBadge(res.headers.get("X-Jarvis-Brain"), res.headers.get("X-Jarvis-Voice"));
     const out = await res.json();
     if (!res.ok) throw new Error(out.error || res.statusText);
-    const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    if (out.remembered) addNote(out.remembered);   // new note joins the live galaxy
+    const secs =((performance.now() - t0) / 1000).toFixed(1);
     const chips = out.nodes.map(id => `<button data-id="${id}">${esc(data.nodes[id].label)}</button>`).join("·");
     const tagInfo = out.tag ? ` · action ${esc(out.tag)} ${out.ok ? "✓" : "✗"}` : "";
     answer.innerHTML = `<div>${esc(out.answer)}</div><div class="meta">${secs}s${tagInfo} · ${chips || (out.tag ? "" : "no matching notes")}</div>`;
@@ -438,7 +439,7 @@ window.JarvisVoice?.addRoute("brain-which", /\bwhich\s+brain\s+are\s+you\s+on\b/
 
 window.JarvisVoice?.addRoute(
   "remember",
-  /^(?:(?:hey[\s,]+)?jarvis[\s,]+)?remember\s+that\s+(.+)/i,
+  /^(?:(?:hey[\s,]+)?jarvis[\s,]+)?(?:please\s+)?(?:remember|note|save|store)\s+(?:that|this)\s*:?\s*(.+)/i,
   async m => {
     try {
       const res = await fetch("/remember", {

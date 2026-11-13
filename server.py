@@ -115,17 +115,6 @@ def load_nodes():
         return _graph_cache["nodes"]
 
 
-def _notes_root():
-    """Return the first existing notes root from build.DEFAULT_ROOTS."""
-    import os
-    import build
-    for raw in build.DEFAULT_ROOTS:
-        p = Path(os.path.expanduser(raw)).resolve()
-        if p.is_dir():
-            return p
-    raise RuntimeError("No notes directory found on disk")
-
-
 def remember_note(text):
     """ONE DOOR FOR NEW NOTES (server side):
     write the markdown file -> append node + links to graph-data.js ->
@@ -143,9 +132,8 @@ def remember_note(text):
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or "note"
     today = time.strftime("%Y-%m-%d")
 
-    root = _notes_root()
-    captures_dir = root / "captures"
-    captures_dir.mkdir(parents=True, exist_ok=True)
+    root = settings.notes_dir()          # JARVIS_NOTES_DIR: the only folder Jarvis writes to
+    captures_dir = root
     md_path = captures_dir / f"{slug}.md"
     n_try = 2
     while md_path.exists():
@@ -165,8 +153,8 @@ def remember_note(text):
         new_node = {
             "id": idx,
             "label": title,
-            "group": "captures",
-            "path": f"{root.name}/captures/{md_path.name}",
+            "group": root.name,
+            "path": f"{root.name}/{md_path.name}",
             "excerpt": build.make_excerpt(body),
         }
 
@@ -235,7 +223,7 @@ def remember_note(text):
         "links": new_links,
         "anchor": anchor,
         "path": new_node["path"],
-        "answer": f'Noted, sir. I\'ve filed "{title}" in captures.',
+        "answer": f'Noted, sir. I\'ve filed "{title}" in {root.name}.',
     }
 
 
@@ -363,7 +351,7 @@ def complete(brain, messages, max_tokens):
 # Each handler really does the work and returns (receipt_text, extra_fields).
 # The receipt is written HERE from the actual result, never by the model, so
 # Jarvis can't claim something happened when it didn't.
-TAG_RE = re.compile(r"\[\s*(REINDEX|FORGET|SHOW|SEARCH|JIRA|CONFLUENCE)\s*(?::\s*([^\]]*))?\]", re.I)
+TAG_RE = re.compile(r"\[\s*(REINDEX|FORGET|SHOW|REMEMBER|SEARCH|JIRA|CONFLUENCE)\s*(?::\s*([^\]]*))?\]", re.I)
 
 
 def tag_reindex(arg):
@@ -416,9 +404,23 @@ def tool_allowed(question, reply):
     return bool(set(terms(arg)) & set(terms(question))) or bool(ISSUE_KEY_RE.search(arg))
 
 
+REMEMBER_RE = re.compile(r"^(?:(?:hey[\s,]+)?jarvis[\s,]+)?(?:please\s+)?(?:remember|note|save|store)"
+                         r"\s+(?:that|this)\s*:?\s*(?P<arg>.+)", re.I | re.S)
+
+
+def tag_remember(arg):
+    """Save the user's own words as a note in JARVIS_NOTES_DIR and link it into the graph."""
+    out = remember_note(arg)
+    return out["answer"], {"nodes": [out["index"]], "remembered": out}
+
+
 def routed_tag(question):
     """A tool's optional `route` regex (named group `arg`) recognises an unambiguous,
-    explicit request, so the small local model need not pick the tag itself."""
+    explicit request, so the small local model need not pick the tag itself.
+    Remembering is routed here too and saves the user's words verbatim, never the model's."""
+    m = REMEMBER_RE.match(question.strip())
+    if m and m.group("arg").strip():
+        return f"[REMEMBER: {m.group('arg').strip().replace(']', ')')}]"
     for name, tool in tools_pkg.REGISTRY.items():
         m = tool.get("route") and tool["route"].search(question.strip())
         if m and m.group("arg").strip():
@@ -434,6 +436,7 @@ def _tool_handler(name):
 
 
 CONTROL_TAGS = {"REINDEX": tag_reindex, "FORGET": tag_forget, "SHOW": tag_show,
+                "REMEMBER": tag_remember,
                 **{name: _tool_handler(name) for name in tools_pkg.REGISTRY}}
 
 
@@ -497,6 +500,9 @@ def ask(question):
                 "nodes": picked}
 
     tm = TAG_RE.search(reply)
+    if tm and tm.group(1).upper() == "REMEMBER" and not REMEMBER_RE.match(question.strip()):
+        return {"answer": "I only write notes when you say 'remember that ...', sir.",
+                "nodes": [], "tag": "[REMEMBER]", "ok": False}
     if tm and tm.group(1).upper() in CONTEXT_TAGS and not tool_allowed(question, reply):
         return {"answer": "I only use my tools when you ask me to, sir. Say it plainly, for "
                           "instance 'search the web for ...' or 'show Jira ticket ABC-1'.",

@@ -22,3 +22,7 @@ Credentials go in `.env` (see `.env.example`), never in code or `config.json`.
 3. Add one tag line (and an example) to `PERSONA` in `server.py`; keep it under 400 words.
 4. Document new credentials in `.env.example`.
 5. For an MCP server, add an entry under `mcp_servers` in `config.json` and call it through `tools/mcp_client.py`.
+
+## Writing notes (Jarvis's own folder)
+`JARVIS_NOTES_DIR` in `.env` is the only folder Jarvis writes to (created if missing; Windows e.g. `...\Documents\Jarvis Notes`, Mac `~/Documents/Jarvis_Notes`). It is also indexed with `NOTES_PATHS`.
+Say "remember that ...", "note that ...", "save this: ..." and Jarvis saves your own words as a `.md` file there, links it to related notes and adds it to the live galaxy; it survives the next `build.py`. The model never chooses what is written, and a `[REMEMBER]` tag from the model on any other question is refused.
