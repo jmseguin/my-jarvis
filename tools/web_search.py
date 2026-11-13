@@ -140,6 +140,25 @@ def web_search(query, cfg=None):
         for k, i in enumerate(items[:n], 1))
 
 
+def run(arg, ctx):
+    """[SEARCH: query] -> (receipt, {"context": results, "query": query})."""
+    cfg = (settings.config().get("tools") or {}).get("web") or {}
+    if cfg.get("enabled", True) is False:
+        raise RuntimeError("web search is switched off in config.json")
+    query = (arg or "").strip()
+    if not query:
+        raise RuntimeError("no search query given")
+    return f'Searched the web for "{query}".', {"context": web_search(query, cfg), "query": query}
+
+
+TAGS = {"SEARCH": {
+    "intent": re.compile(r"\b(search|google|look\s*up|lookup|online|internet|web|browse)\b", re.I),
+    "route": re.compile(r"^(?:please\s+)?(?:search|google)\s+(?:the\s+)?(?:web|internet|online)\s+for\s+(?P<arg>.+)", re.I),
+    "label": "WEB RESULTS",
+    "run": run,
+}}
+
+
 if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")

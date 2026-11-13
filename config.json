@@ -22,6 +22,21 @@
   "tools": {
     "web": {"enabled": true, "max_results": 5, "timeout": 40}
   },
+  "mcp_servers": {
+    "atlassian": {
+      "enabled": true,
+      "command": "uvx",
+      "args": ["mcp-atlassian"],
+      "env": ["JIRA_URL", "JIRA_PERSONAL_TOKEN", "JIRA_USERNAME", "JIRA_API_TOKEN", "JIRA_SSL_VERIFY",
+              "CONFLUENCE_URL", "CONFLUENCE_PERSONAL_TOKEN", "CONFLUENCE_USERNAME",
+              "CONFLUENCE_API_TOKEN", "CONFLUENCE_SSL_VERIFY"],
+      "required_env": ["JIRA_URL"],
+      "required_any": [["JIRA_PERSONAL_TOKEN", "JIRA_API_TOKEN"]],
+      "allow": ["jira_get_issue", "jira_search", "jira_get_all_projects",
+                "confluence_search", "confluence_get_page", "confluence_get_page_children"],
+      "start_timeout": 120
+    }
+  },
   "voice": {
     "url": "http://127.0.0.1:3900",
     "engine": "mlx-audio",
