@@ -15,16 +15,20 @@ import re
 import sys
 from pathlib import Path
 
+import settings
+
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "viewer" / "graph-data.js"
 
-# The roots you asked for, plus the vault that actually exists on this Mac
-# (~/Documents/ObsidianVault, no space). Missing roots are skipped with a warning.
-DEFAULT_ROOTS = [
-    "~/Documents/Obsidian Vault",
-    "~/Documents/Notes",
-    "~/Documents/ObsidianVault",
-]
+def load_roots():
+    """Note folders Jarvis indexes: NOTES_PATHS in .env, separated by ';'. Never hardcoded."""
+    roots = [r.strip() for r in settings.get("NOTES_PATHS").split(";") if r.strip()]
+    if not roots:
+        sys.exit("No note folders configured. Copy .env.example to .env and set NOTES_PATHS.")
+    return roots
+
+
+DEFAULT_ROOTS = load_roots()   # name kept: server.py imports it
 
 EXCERPT_CHARS = 700
 MIN_TITLE_LEN = 4          # shorter titles are too noisy for "mentions" linking
@@ -155,9 +159,11 @@ def build(roots):
         t = n["_title"].strip()
         if len(t) < MIN_TITLE_LEN:
             continue
-        pat = re.compile(r"(?<![\w])" + re.escape(t.lower()) + r"(?![\w])")
+        tl = t.lower()
+        pat = re.compile(r"(?<![\w])" + re.escape(tl) + r"(?![\w])")
         for i, m in enumerate(nodes):
-            if i != j and pat.search(m["_text"]):
+            # cheap substring test first; the regex only confirms word boundaries
+            if i != j and tl in m["_text"] and pat.search(m["_text"]):
                 add(i, j, "mention")
 
     for n in nodes:

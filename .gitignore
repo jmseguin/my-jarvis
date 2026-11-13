@@ -18,3 +18,6 @@ viewer/graph-data.js
 *.swp
 .vscode/
 .idea/
+
+# Local settings (note folders etc.)
+.env
