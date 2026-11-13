@@ -62,3 +62,13 @@ def config():
     """Parsed config.json from the project root."""
     import json
     return json.loads((ENV_FILE.parent / "config.json").read_text(encoding="utf-8"))
+
+
+def notes_dir():
+    """The one folder Jarvis may WRITE notes into (JARVIS_NOTES_DIR in .env), created if missing."""
+    raw = get("JARVIS_NOTES_DIR")
+    if not raw:
+        raise RuntimeError("JARVIS_NOTES_DIR is not set in .env, so I have nowhere to write notes")
+    p = Path(os.path.expanduser(raw))
+    p.mkdir(parents=True, exist_ok=True)
+    return p.resolve()

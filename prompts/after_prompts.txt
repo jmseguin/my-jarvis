@@ -1,0 +1,15 @@
+# Tools
+We will discuss creating "tools" that jarvis can use. Each tool should be created in the tools/ subdirectory of my-jarvis project so that we can expand on them and all developers know that these are tools.
+
+Let's give Jarvis access to a working browser. Jarvis should be allowed to use tools. One of the tools should be my headless Chrome browser to search the internet
+There should be a .env in the project folder "root" so that any needed credendials for tools can be added. Make sure to also have a .env.example file that shows WHAT is needed when we create them.
+
+Other tools that should be made available are mcp servers. First off, "mcp-atlassian" so Jarvis can access Jira and Confluence when asked. This is the first tool that needs creds so make sure .env.example shows what is needed.
+
+# Notes from Jarvis
+
+Allow Jarvis to write in the [Windows: "C:\Users\jseguin\OneDrive - THALES SA\Documents\Jarvis Notes", Mac: "~/Documents/Jarvis_Notes"] directory. This will allow Jarvis to store knowledge as we discuss and merge that knowledge into the knowledge system. Make sure to add this directory to Jarvis' knowledge. This "Notes" directory, should come from .env, of course
+  
+# Personal Knowledge Paths
+Paths that Jarvis indexed as its knowledge should not be hardcoded. They should be defined in .env
+
