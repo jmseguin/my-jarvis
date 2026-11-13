@@ -23,14 +23,14 @@ OUT = ROOT / "viewer" / "graph-data.js"
 def load_roots():
     """Folders Jarvis indexes: JARVIS_NOTES_DIR (his own writable notes, first so its
     files keep their own path prefix) plus NOTES_PATHS from .env, separated by ';'."""
-    roots = [r.strip() for r in settings.get("NOTES_PATHS").split(";") if r.strip()]
+    roots = settings.split_paths(settings.get("NOTES_PATHS"))
     own = settings.get("JARVIS_NOTES_DIR")
     if own:
         try:
             settings.notes_dir()                      # create it so the first scan finds it
         except OSError as e:
             print(f"  ! cannot create JARVIS_NOTES_DIR: {e}")
-        roots.insert(0, own)
+        roots.insert(0, str(settings.as_path(own)))
     if not roots:
         sys.exit("No note folders configured. Copy .env.example to .env and set NOTES_PATHS.")
     return roots
@@ -74,7 +74,7 @@ def scan(roots):
     files = []
     seen = set()
     for raw in roots:
-        root = Path(os.path.expanduser(raw)).resolve()
+        root = settings.as_path(raw).resolve()
         if not root.is_dir():
             print(f"  ! skipping missing folder: {raw}")
             continue

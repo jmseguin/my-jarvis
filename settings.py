@@ -32,6 +32,51 @@ def _registry_user_env():
     return out
 
 
+QUOTES = "\"'"
+
+
+def unquote(v):
+    """Value of a .env entry. Quotes are optional: 'C:\\My Notes', "C:\\My Notes" and
+    C:\\My Notes all work (spaces never need quoting here, because nothing splits on
+    them). Anything after a closing quote, such as a trailing comment, is dropped."""
+    v = v.strip()
+    if v and v[0] in QUOTES:
+        end = v.find(v[0], 1)
+        if end == -1:
+            return v[1:].strip()                      # unterminated quote: take the rest
+        rest = v[end + 1:].strip()
+        if not rest or rest.startswith("#"):          # whole value was quoted (+ comment)
+            return v[1:end]
+        # several quoted items, e.g. "C:\a b";"C:\c d": keep as is for split_paths()
+    return v
+
+
+def split_paths(raw):
+    """Split a ';' separated list of paths. A path may be quoted, and quoted paths
+    may contain ';'. Blank items are skipped."""
+    items, cur, quote = [], "", None
+    for ch in raw or "":
+        if quote:
+            if ch == quote:
+                quote = None
+            else:
+                cur += ch
+        elif ch in QUOTES:
+            quote = ch
+        elif ch == ";":
+            items.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    items.append(cur)
+    return [i.strip() for i in items if i.strip()]
+
+
+def as_path(raw):
+    """A user-written path -> Path: %VAR% / $VAR and ~ expanded."""
+    return Path(os.path.expanduser(os.path.expandvars(unquote(raw))))
+
+
 def load_env(path=ENV_FILE):
     """Precedence, highest first: non-empty value in .env, fresh Windows user
     environment, inherited process environment."""
@@ -42,7 +87,7 @@ def load_env(path=ENV_FILE):
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
-                v = v.strip().strip('"').strip("'")
+                v = unquote(v)
                 if v:
                     env[k.strip()] = v
     return env
@@ -69,6 +114,6 @@ def notes_dir():
     raw = get("JARVIS_NOTES_DIR")
     if not raw:
         raise RuntimeError("JARVIS_NOTES_DIR is not set in .env, so I have nowhere to write notes")
-    p = Path(os.path.expanduser(raw))
+    p = as_path(raw)
     p.mkdir(parents=True, exist_ok=True)
     return p.resolve()
